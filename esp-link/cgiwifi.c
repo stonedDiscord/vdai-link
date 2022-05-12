@@ -280,7 +280,7 @@ void ICACHE_FLASH_ATTR wifiStartScan() {
     cgiWifiAps.scanInProgress = 1;
     os_timer_disarm(&scanTimer);
     os_timer_setfn(&scanTimer, scanStartCb, NULL);
-    os_timer_arm(&scanTimer, 200, 0);
+    os_timer_arm_us(&scanTimer, 200000, 0);
   }
 }
 
@@ -336,7 +336,7 @@ static void ICACHE_FLASH_ATTR resetTimerCb(void *arg) {
       // We're happily connected, go to STA mode
       DBG("Wifi got IP. Going into STA mode..\n");
       wifi_set_opmode(1);
-      os_timer_arm(&resetTimer, RESET_TIMEOUT, 0); // check one more time after switching to STA-only
+      os_timer_arm_us(&resetTimer, RESET_TIMEOUT * 1000, 0); // check one more time after switching to STA-only
 #endif
     }
     log_uart(false);
@@ -350,7 +350,7 @@ static void ICACHE_FLASH_ATTR resetTimerCb(void *arg) {
     }
     log_uart(true);
     DBG("Enabling/continuing uart log\n");
-    os_timer_arm(&resetTimer, RESET_TIMEOUT, 0);
+    os_timer_arm_us(&resetTimer, RESET_TIMEOUT * 1000, 0);
   }
 }
 
@@ -369,7 +369,19 @@ static void ICACHE_FLASH_ATTR reassTimerCb(void *arg) {
   // IP address
   os_timer_disarm(&resetTimer);
   os_timer_setfn(&resetTimer, resetTimerCb, NULL);
-  os_timer_arm(&resetTimer, 4*RESET_TIMEOUT, 0);
+  os_timer_arm_us(&resetTimer, 4*RESET_TIMEOUT * 1000, 0);
+}
+
+// Kick off connection to some network
+void ICACHE_FLASH_ATTR connectToNetwork(char *ssid, char *pass) {
+  os_strncpy((char*)stconf.ssid, ssid, 32);
+  os_strncpy((char*)stconf.password, pass, 64);
+  DBG("Wifi try to connect to AP %s pw %s\n", ssid, pass);
+
+  // Schedule disconnect/connect
+  os_timer_disarm(&reassTimer);
+  os_timer_setfn(&reassTimer, reassTimerCb, NULL);
+  os_timer_arm_us(&reassTimer, 1000000, 0); // 1 second for the response of this request to make it
 }
 
 // Kick off connection to some network
@@ -528,7 +540,7 @@ int ICACHE_FLASH_ATTR cgiWiFiSpecial(HttpdConnData *connData) {
   // schedule change-over
   os_timer_disarm(&reassTimer);
   os_timer_setfn(&reassTimer, configWifiIP, NULL);
-  os_timer_arm(&reassTimer, 1000, 0); // 1 second for the response of this request to make it
+  os_timer_arm_us(&reassTimer, 1 * 1000000, 0); // 1 second for the response of this request to make it
   // return redirect info
   jsonHeader(connData, 200);
   httpdSend(connData, url, -1);
@@ -714,7 +726,7 @@ int ICACHE_FLASH_ATTR cgiWiFiSetMode(HttpdConnData *connData) {
             wifi_station_connect();
             os_timer_disarm(&resetTimer);
             os_timer_setfn(&resetTimer, resetTimerCb, NULL);
-            os_timer_arm(&resetTimer, RESET_TIMEOUT, 0);
+            os_timer_arm_us(&resetTimer, RESET_TIMEOUT * 1000, 0);
         }
         if(previous_mode == 1){
             // moving to AP or STA+AP from STA, so softap config call needed
@@ -829,7 +841,7 @@ int ICACHE_FLASH_ATTR cgiWiFiConnStatus(HttpdConnData *connData) {
       // Reset into AP-only mode sooner.
       os_timer_disarm(&resetTimer);
       os_timer_setfn(&resetTimer, resetTimerCb, NULL);
-      os_timer_arm(&resetTimer, 1000, 0);
+      os_timer_arm_us(&resetTimer, 1 * 1000000, 0);
     }
   }
 #endif
@@ -973,7 +985,41 @@ void ICACHE_FLASH_ATTR wifiInit() {
     // check on the wifi in a few seconds to see whether we need to switch mode
     os_timer_disarm(&resetTimer);
     os_timer_setfn(&resetTimer, resetTimerCb, NULL);
-    os_timer_arm(&resetTimer, RESET_TIMEOUT, 0);
+    os_timer_arm_us(&resetTimer, RESET_TIMEOUT * 1000, 0);
+}
+
+// Access functions for cgiWifiAps : query the number of entries in the table
+int ICACHE_FLASH_ATTR wifiGetApCount() {
+  if (cgiWifiAps.scanInProgress)
+    return 0;
+  return cgiWifiAps.noAps;
+}
+
+// Access functions for cgiWifiAps : returns the name of a network, i is the index into the array, return stored in memory pointed to by ptr.
+ICACHE_FLASH_ATTR void wifiGetApName(int i, char *ptr) {
+  if (i < 0)
+    return;
+  if (i >= cgiWifiAps.noAps)
+    return;
+
+  if (ptr != 0)
+    strncpy(ptr, cgiWifiAps.apData[i]->ssid, 32);
+
+  DBG("AP %s\n", cgiWifiAps.apData[i]->ssid);
+}
+
+// Access functions for cgiWifiAps : returns the signal strength of network (i is index into array). Return current network strength for negative i.
+ICACHE_FLASH_ATTR int wifiSignalStrength(int i) {
+  sint8 rssi;
+
+  if (i < 0 || i == 255)
+    rssi = wifi_station_get_rssi();	// Current network's signal strength
+  else if (i >= cgiWifiAps.noAps)
+    rssi = 0;				// FIX ME
+  else
+    rssi = cgiWifiAps.apData[i]->rssi;	// Signal strength of any known network
+
+  return rssi;
 }
 
 // Access functions for cgiWifiAps : query the number of entries in the table
