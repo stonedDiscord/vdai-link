@@ -1,7 +1,10 @@
-ESP-LINK: Wifi-Serial Bridge w/REST&MQTT
-========================================
+# ESP-LINK: Wifi-Serial Bridge w/REST&MQTT
 
-<img src="https://cloud.githubusercontent.com/assets/39480/19333951/73fcdcbe-90ad-11e6-8572-5e654377275a.png">
+**The `master` branch of this fork has been updated to integrate all changes**
+**from `fix-master` and `platformio`.**
+**This branch now builds with PlatformIO.**
+
+![esp-link index page](https://cloud.githubusercontent.com/assets/39480/19333951/73fcdcbe-90ad-11e6-8572-5e654377275a.png)
 
 The esp-link firmware connects a micro-controller to the internet using an ESP8266 Wifi module.
 It implements a number of features:
