@@ -384,18 +384,6 @@ void ICACHE_FLASH_ATTR connectToNetwork(char *ssid, char *pass) {
   os_timer_arm_us(&reassTimer, 1000000, 0); // 1 second for the response of this request to make it
 }
 
-// Kick off connection to some network
-void ICACHE_FLASH_ATTR connectToNetwork(char *ssid, char *pass) {
-  os_strncpy((char*)stconf.ssid, ssid, 32);
-  os_strncpy((char*)stconf.password, pass, 64);
-  DBG("Wifi try to connect to AP %s pw %s\n", ssid, pass);
-
-  // Schedule disconnect/connect
-  os_timer_disarm(&reassTimer);
-  os_timer_setfn(&reassTimer, reassTimerCb, NULL);
-  os_timer_arm(&reassTimer, 1000, 0); // 1 second for the response of this request to make it
-}
-
 // This cgi uses the routines above to connect to a specific access point with the
 // given ESSID using the given password.
 int ICACHE_FLASH_ATTR cgiWiFiConnect(HttpdConnData *connData) {
@@ -986,40 +974,6 @@ void ICACHE_FLASH_ATTR wifiInit() {
     os_timer_disarm(&resetTimer);
     os_timer_setfn(&resetTimer, resetTimerCb, NULL);
     os_timer_arm_us(&resetTimer, RESET_TIMEOUT * 1000, 0);
-}
-
-// Access functions for cgiWifiAps : query the number of entries in the table
-int ICACHE_FLASH_ATTR wifiGetApCount() {
-  if (cgiWifiAps.scanInProgress)
-    return 0;
-  return cgiWifiAps.noAps;
-}
-
-// Access functions for cgiWifiAps : returns the name of a network, i is the index into the array, return stored in memory pointed to by ptr.
-ICACHE_FLASH_ATTR void wifiGetApName(int i, char *ptr) {
-  if (i < 0)
-    return;
-  if (i >= cgiWifiAps.noAps)
-    return;
-
-  if (ptr != 0)
-    strncpy(ptr, cgiWifiAps.apData[i]->ssid, 32);
-
-  DBG("AP %s\n", cgiWifiAps.apData[i]->ssid);
-}
-
-// Access functions for cgiWifiAps : returns the signal strength of network (i is index into array). Return current network strength for negative i.
-ICACHE_FLASH_ATTR int wifiSignalStrength(int i) {
-  sint8 rssi;
-
-  if (i < 0 || i == 255)
-    rssi = wifi_station_get_rssi();	// Current network's signal strength
-  else if (i >= cgiWifiAps.noAps)
-    rssi = 0;				// FIX ME
-  else
-    rssi = cgiWifiAps.apData[i]->rssi;	// Signal strength of any known network
-
-  return rssi;
 }
 
 // Access functions for cgiWifiAps : query the number of entries in the table
