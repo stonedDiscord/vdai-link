@@ -1,3 +1,11 @@
+# VSCode config
+.vscode
+
+# PlatformIO artifacts
+__pycache__
+temp-espfs
+**/espfs_img.c
+
 src/espfs_image.c
 build/
 firmware/
