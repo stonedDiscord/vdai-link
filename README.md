@@ -1,6 +1,12 @@
 ESP-LINK: Wifi-Serial Bridge w/REST&MQTT
 ========================================
 
+**NB** This is a [fork of the original jeelabs/esplink
+project](https://github.com/jeelabs/esp-link). There were a number of
+problems with the RFC 2216 (com port options handling) code, and the
+original repository is no longer maintained. I am happy to accept bugfix
+pull requests.
+
 <img src="https://cloud.githubusercontent.com/assets/39480/19333951/73fcdcbe-90ad-11e6-8572-5e654377275a.png">
 
 The esp-link firmware connects a micro-controller to the internet using an ESP8266 Wifi module.
