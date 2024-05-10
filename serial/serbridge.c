@@ -56,6 +56,14 @@ serbridgeConnData connData[MAX_CONN];
 #define DTR_OFF      9
 #define RTS_ON      11  // used here to signal ISP (in-system-programming) to uC
 #define RTS_OFF     12
+#define OUTPUT_FLOW_REQ 0     // request current flow control state
+#define OUTPUT_FLOW_NONE 1
+#define OUTPUT_FLOW_SOFT 2
+#define OUTPUT_FLOW_HARD 3
+#define INPUT_FLOW_REQ 13     // request current flow control state
+#define INPUT_FLOW_NONE 14
+#define INPUT_FLOW_SOFT 15
+#define INPUT_FLOW_HARD 16
 
 // telnet state machine states
 enum { TN_normal, TN_iac, TN_will, TN_start, TN_end, TN_comPort, TN_setControl, TN_setBaud,
@@ -167,6 +175,20 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
       break;
     case TN_setControl:             // switch control line and delay a tad
       switch (c) {
+      case OUTPUT_FLOW_REQ:
+      case OUTPUT_FLOW_NONE:
+      case OUTPUT_FLOW_SOFT:
+      case OUTPUT_FLOW_HARD: {
+        char respBuf[7] = {IAC, SB, ComPortOpt, SetControl, OUTPUT_FLOW_NONE, IAC, SE};
+        espbuffsend(conn, respBuf, 7);
+        break; }
+      case INPUT_FLOW_REQ:
+      case INPUT_FLOW_NONE:
+      case INPUT_FLOW_SOFT:
+      case INPUT_FLOW_HARD: {
+        char respBuf[7] = {IAC, SB, ComPortOpt, SetControl, INPUT_FLOW_NONE, IAC, SE};
+        espbuffsend(conn, respBuf, 7);
+        break; }
       case DTR_ON:
         if (mcu_reset_pin >= 0) {
 #ifdef SERBR_DBG
@@ -277,6 +299,7 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
         char respBuf[7] = { IAC, SB, ComPortOpt, SetStopBits, 1, IAC, SE };
         if (flashConfig.stop_bits == ONE_STOP_BIT) respBuf[4] = 1;
         if (flashConfig.stop_bits == TWO_STOP_BIT) respBuf[4] = 2;
+        if (flashConfig.stop_bits == ONE_HALF_STOP_BIT) respBuf[4] = 3;
         espbuffsend(conn, respBuf, 7);
         state = TN_end;
         break;
