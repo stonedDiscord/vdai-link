@@ -317,7 +317,7 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
     case TN_setParity:
       if (c == 0) {
         // parity of zero means we need to send the parity info
-        char respBuf[7] = { IAC, SB, ComPortOpt, SetDataSize, 1/*none*/, IAC, SE };
+        char respBuf[7] = { IAC, SB, ComPortOpt, SetParity, 1/*none*/, IAC, SE };
         if (flashConfig.parity == ODD_BITS) respBuf[4] = 2;
         if (flashConfig.parity == EVEN_BITS) respBuf[4] = 3;
         espbuffsend(conn, respBuf, 7);
