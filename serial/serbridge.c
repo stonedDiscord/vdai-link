@@ -91,8 +91,9 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
         state = TN_normal;
         break;
       default:                      // not sure... let's ignore
-        uart0_write_char(IAC);
-        uart0_write_char(c);
+        os_printf("Telnet: ignore IAC + %d\n", c);
+        state = TN_normal;
+        break;
       }
       break;
     case TN_will: {                 // client announcing it will send telnet cmds, try to respond
