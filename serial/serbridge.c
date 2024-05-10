@@ -38,6 +38,7 @@ serbridgeConnData connData[MAX_CONN];
 #define WILL       251  // negotiation
 #define SB         250  // subnegotiation begin
 #define SE         240  // subnegotiation end
+#define BREAK      243  // BREAK command
 #define ComPortOpt  44  // COM port options
 #define SetBaud      1  // Set baud rate
 #define SetDataSize  2  // Set data size
@@ -55,7 +56,7 @@ serbridgeConnData connData[MAX_CONN];
 
 // telnet state machine states
 enum { TN_normal, TN_iac, TN_will, TN_start, TN_end, TN_comPort, TN_setControl, TN_setBaud,
-    TN_setDataSize, TN_setParity, TN_purgeData };
+    TN_setDataSize, TN_setParity, TN_purgeData, TN_break_cmd };
 static char tn_baudCnt;
 static uint32_t tn_baud; // shared across all sockets, thus possible race condition
 static uint8_t tn_break = 0;  // 0=BREAK-OFF, 1=BREAK-ON
@@ -90,12 +91,27 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
       case SE:                      // command sequence end
         state = TN_normal;
         break;
+      case BREAK:
+        state = TN_break_cmd;
+        break;
       default:                      // not sure... let's ignore
         os_printf("Telnet: ignore IAC + %d\n", c);
         state = TN_normal;
         break;
       }
       break;
+    case TN_break_cmd: {
+        if (((READ_PERI_REG(UART_STATUS(UART0))>>UART_TXFIFO_CNT_S)&UART_TXFIFO_CNT) == 0) {  // TX-FIFO of UART0 must be empty
+          os_printf("Telnet: BREAK\n");
+          PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_GPIO1);
+          GPIO_OUTPUT_SET(1, 0);
+          os_delay_us(1000L);
+          GPIO_OUTPUT_SET(1, 1);
+          PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
+        }
+        state = TN_normal;
+        break;
+      }
     case TN_will: {                 // client announcing it will send telnet cmds, try to respond
       char respBuf[3] = {IAC, DONT, c};
       if (c == ComPortOpt) respBuf[1] = DO;
