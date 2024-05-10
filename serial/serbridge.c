@@ -36,6 +36,7 @@ serbridgeConnData connData[MAX_CONN];
 #define DONT       254  // negotiation
 #define DO         253  // negotiation
 #define WILL       251  // negotiation
+#define WONT       252  // negotiation
 #define SB         250  // subnegotiation begin
 #define SE         240  // subnegotiation end
 #define BREAK      243  // BREAK command
@@ -56,7 +57,7 @@ serbridgeConnData connData[MAX_CONN];
 
 // telnet state machine states
 enum { TN_normal, TN_iac, TN_will, TN_start, TN_end, TN_comPort, TN_setControl, TN_setBaud,
-    TN_setDataSize, TN_setParity, TN_purgeData, TN_break_cmd };
+    TN_setDataSize, TN_setParity, TN_purgeData, TN_break_cmd, TN_do };
 static char tn_baudCnt;
 static uint32_t tn_baud; // shared across all sockets, thus possible race condition
 static uint8_t tn_break = 0;  // 0=BREAK-OFF, 1=BREAK-ON
@@ -84,6 +85,9 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
         break;
       case WILL:                    // negotiation
         state = TN_will;
+        break;
+      case DO:
+        state = TN_do;
         break;
       case SB:                      // command sequence begin
         state = TN_start;
@@ -119,6 +123,13 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
       espbuffsend(conn, respBuf, 3);
       state = TN_normal;            // go back to normal
       break; }
+    case TN_do: {
+        char respBuf[3] = {IAC, WONT, c};
+        os_printf("Telnet: rejecting DO %d\n", c);
+        espbuffsend(conn, respBuf, 3);
+        state = TN_normal;
+        break;
+      }
     case TN_start:                  // in command seq, now comes the type of cmd
       if (c == ComPortOpt) state = TN_comPort;
       else state = TN_end;          // an option we don't know, skip 'til the end seq
