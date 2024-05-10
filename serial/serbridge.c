@@ -287,7 +287,7 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
         } else if (tn_baud == 0) {
           // baud rate of zero means we need to send the baud rate
           uint32_t b = flashConfig.baud_rate;
-          char respBuf[10] = { IAC, SB, ComPortOpt, SetDataSize, b>>24, b>>16, b>>8, b, IAC, SE };
+          char respBuf[10] = { IAC, SB, ComPortOpt, SetBaud, b>>24, b>>16, b>>8, b, IAC, SE };
           espbuffsend(conn, respBuf, 10);
         }
         state = TN_end;
