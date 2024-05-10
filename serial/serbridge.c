@@ -41,6 +41,7 @@ serbridgeConnData connData[MAX_CONN];
 #define SE         240  // subnegotiation end
 #define BREAK      243  // BREAK command
 #define ComPortOpt  44  // COM port options
+#define Signature    0  // Request/send signature
 #define SetBaud      1  // Set baud rate
 #define SetDataSize  2  // Set data size
 #define SetParity    3  // Set parity
@@ -57,7 +58,7 @@ serbridgeConnData connData[MAX_CONN];
 
 // telnet state machine states
 enum { TN_normal, TN_iac, TN_will, TN_start, TN_end, TN_comPort, TN_setControl, TN_setBaud,
-    TN_setDataSize, TN_setParity, TN_purgeData, TN_break_cmd, TN_do };
+    TN_setDataSize, TN_setParity, TN_purgeData, TN_break_cmd, TN_do, TN_signature };
 static char tn_baudCnt;
 static uint32_t tn_baud; // shared across all sockets, thus possible race condition
 static uint8_t tn_break = 0;  // 0=BREAK-OFF, 1=BREAK-ON
@@ -144,9 +145,16 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
       case SetParity: state = TN_setParity; break;
       case SetBaud: state = TN_setBaud; tn_baudCnt = 0; tn_baud = 0; break;
       case PurgeData: state = TN_purgeData; break;
+      case Signature: state=TN_signature; break;
       default: state = TN_end; break;
       }
       break;
+    case TN_signature: {
+        char respBuf[14] = { IAC, SB, ComPortOpt, Signature, 'e', 's', 'p', '-', 'l', 'i', 'n', 'k', IAC, SE };
+        espbuffsend(conn, respBuf, 14);
+        state = TN_end;
+        break;
+      }
     case TN_purgeData:              // purge FIFO-buffers
       switch (c) {
         case PURGE_TX:
