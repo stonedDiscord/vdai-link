@@ -64,10 +64,12 @@ serbridgeConnData connData[MAX_CONN];
 #define INPUT_FLOW_NONE 14
 #define INPUT_FLOW_SOFT 15
 #define INPUT_FLOW_HARD 16
+#define SetLineStateMask 10   // request/set linestate mask
+#define NotifyLineState 106
 
 // telnet state machine states
 enum { TN_normal, TN_iac, TN_will, TN_start, TN_end, TN_comPort, TN_setControl, TN_setBaud,
-    TN_setDataSize, TN_setParity, TN_setStopBits, TN_purgeData, TN_break_cmd, TN_do, TN_signature };
+    TN_setDataSize, TN_setParity, TN_setStopBits, TN_purgeData, TN_break_cmd, TN_do, TN_signature, TN_linestate };
 static char tn_baudCnt;
 static uint32_t tn_baud; // shared across all sockets, thus possible race condition
 static uint8_t tn_break = 0;  // 0=BREAK-OFF, 1=BREAK-ON
@@ -156,9 +158,15 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
       case SetBaud: state = TN_setBaud; tn_baudCnt = 0; tn_baud = 0; break;
       case PurgeData: state = TN_purgeData; break;
       case Signature: state=TN_signature; break;
+      case SetLineStateMask: state = TN_linestate; break;
       default: state = TN_end; break;
       }
       break;
+    case TN_linestate: {
+      char respBuf[7] = {IAC, SB,  ComPortOpt, NotifyLineState, 0, IAC, SE};
+      espbuffsend(conn, respBuf, 14);
+      state = TN_end;
+      break; }
     case TN_signature: {
         char respBuf[14] = { IAC, SB, ComPortOpt, Signature, 'e', 's', 'p', '-', 'l', 'i', 'n', 'k', IAC, SE };
         espbuffsend(conn, respBuf, 14);
