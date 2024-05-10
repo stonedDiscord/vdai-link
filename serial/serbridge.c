@@ -45,6 +45,7 @@ serbridgeConnData connData[MAX_CONN];
 #define SetBaud      1  // Set baud rate
 #define SetDataSize  2  // Set data size
 #define SetParity    3  // Set parity
+#define SetStopBits  4  // Set stop bits
 #define SetControl   5  // Set control lines
 #define PurgeData   12  // Flush FIFO buffer(s)
 #define PURGE_TX     2
@@ -58,7 +59,7 @@ serbridgeConnData connData[MAX_CONN];
 
 // telnet state machine states
 enum { TN_normal, TN_iac, TN_will, TN_start, TN_end, TN_comPort, TN_setControl, TN_setBaud,
-    TN_setDataSize, TN_setParity, TN_purgeData, TN_break_cmd, TN_do, TN_signature };
+    TN_setDataSize, TN_setParity, TN_setStopBits, TN_purgeData, TN_break_cmd, TN_do, TN_signature };
 static char tn_baudCnt;
 static uint32_t tn_baud; // shared across all sockets, thus possible race condition
 static uint8_t tn_break = 0;  // 0=BREAK-OFF, 1=BREAK-ON
@@ -143,6 +144,7 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
       case SetControl: state = TN_setControl; break;
       case SetDataSize: state = TN_setDataSize; break;
       case SetParity: state = TN_setParity; break;
+      case SetStopBits: state = TN_setStopBits; break;
       case SetBaud: state = TN_setBaud; tn_baudCnt = 0; tn_baud = 0; break;
       case PurgeData: state = TN_purgeData; break;
       case Signature: state=TN_signature; break;
@@ -268,6 +270,26 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
         }
         state = TN_end;
       }
+      break;
+    case TN_setStopBits:
+      if (c == 0) {
+        // stop bits of zero means we need to send the stop bits info
+        char respBuf[7] = { IAC, SB, ComPortOpt, SetStopBits, 1, IAC, SE };
+        if (flashConfig.stop_bits == ONE_STOP_BIT) respBuf[4] = 1;
+        if (flashConfig.stop_bits == TWO_STOP_BIT) respBuf[4] = 2;
+        espbuffsend(conn, respBuf, 7);
+        state = TN_end;
+        break;
+      }
+      uint8_t stop_bits = ONE_STOP_BIT;
+      if (c==1) stop_bits=ONE_STOP_BIT;
+      if (c==2) stop_bits=TWO_STOP_BIT;
+      if (c==3) stop_bits=ONE_HALF_STOP_BIT;
+      flashConfig.stop_bits = stop_bits;
+      //uart0_config(flashConfig.data_bits, flashConfig.parity, flashConfig.stop_bits);
+      configSave();
+      os_printf("Telnet: stop_bits %s\n", c==1?"1":c==2?"2":"1.5");
+      state = TN_end;
       break;
     case TN_setParity:
       if (c == 0) {
