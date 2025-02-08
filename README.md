@@ -4,6 +4,12 @@
 **from `fix-master` and `platformio`.**
 **This branch now builds with PlatformIO.**
 
+## Merged Repositories
+
+- https://github.com/larsks/esp-link
+
+---  
+
 ![esp-link index page](https://cloud.githubusercontent.com/assets/39480/19333951/73fcdcbe-90ad-11e6-8572-5e654377275a.png)
 
 The esp-link firmware connects a micro-controller to the internet using an ESP8266 Wifi module.
@@ -114,7 +120,7 @@ mode the attached uC sends custom commands to esp-link with sensor/acturator inf
 registers a set of callbacks with esp-link that control sensors/actuators. This way, custom
 commands in esp-link can receive MQTT messages, make simple callbacks into the uC to get sensor
 values or change actuators, and then respond back with MQTT. The way this is architected is that
-the attached uC registers callbacks at start-up such that the code in the esp doesn't need to 
+the attached uC registers callbacks at start-up such that the code in the esp doesn't need to
 know which exact sensors/actuators the attached uC has, it learns that through the initial
 callback registration.
 
@@ -134,15 +140,15 @@ Getting Started
 ---------------
 
 To get started you need to:
- 1. prepare your esp8266 module for serial flashing
- 2. download the latest esp-link release image (you can build your own later)
- 3. flash the firmware
- 4. configure the Wifi in esp-link for your network
+1. prepare your esp8266 module for serial flashing
+2. download the latest esp-link release image (you can build your own later)
+3. flash the firmware
+4. configure the Wifi in esp-link for your network
 
 You can then attach a uC and upload a sketch:
- 1. attach a uC (e.g. arduino) to your esp8266 module
- 2. connect via the serial port to see a pre-loaded sketch running
- 3. upload a fresh version of the sketch
+1. attach a uC (e.g. arduino) to your esp8266 module
+2. connect via the serial port to see a pre-loaded sketch running
+3. upload a fresh version of the sketch
 
 From there, more advanced steps are:
 - write a sketch that uses MQTT to communicate, or that makes outbound REST requests
