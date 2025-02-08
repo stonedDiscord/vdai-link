@@ -36,12 +36,16 @@ serbridgeConnData connData[MAX_CONN];
 #define DONT       254  // negotiation
 #define DO         253  // negotiation
 #define WILL       251  // negotiation
+#define WONT       252  // negotiation
 #define SB         250  // subnegotiation begin
 #define SE         240  // subnegotiation end
+#define BREAK      243  // BREAK command
 #define ComPortOpt  44  // COM port options
+#define Signature    0  // Request/send signature
 #define SetBaud      1  // Set baud rate
 #define SetDataSize  2  // Set data size
 #define SetParity    3  // Set parity
+#define SetStopBits  4  // Set stop bits
 #define SetControl   5  // Set control lines
 #define PurgeData   12  // Flush FIFO buffer(s)
 #define PURGE_TX     2
@@ -52,10 +56,20 @@ serbridgeConnData connData[MAX_CONN];
 #define DTR_OFF      9
 #define RTS_ON      11  // used here to signal ISP (in-system-programming) to uC
 #define RTS_OFF     12
+#define OUTPUT_FLOW_REQ 0     // request current flow control state
+#define OUTPUT_FLOW_NONE 1
+#define OUTPUT_FLOW_SOFT 2
+#define OUTPUT_FLOW_HARD 3
+#define INPUT_FLOW_REQ 13     // request current flow control state
+#define INPUT_FLOW_NONE 14
+#define INPUT_FLOW_SOFT 15
+#define INPUT_FLOW_HARD 16
+#define SetLineStateMask 10   // request/set linestate mask
+#define NotifyLineState 106
 
 // telnet state machine states
 enum { TN_normal, TN_iac, TN_will, TN_start, TN_end, TN_comPort, TN_setControl, TN_setBaud,
-    TN_setDataSize, TN_setParity, TN_purgeData };
+    TN_setDataSize, TN_setParity, TN_setStopBits, TN_purgeData, TN_break_cmd, TN_do, TN_signature, TN_linestate };
 static char tn_baudCnt;
 static uint32_t tn_baud; // shared across all sockets, thus possible race condition
 static uint8_t tn_break = 0;  // 0=BREAK-OFF, 1=BREAK-ON
@@ -84,17 +98,36 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
       case WILL:                    // negotiation
         state = TN_will;
         break;
+      case DO:
+        state = TN_do;
+        break;
       case SB:                      // command sequence begin
         state = TN_start;
         break;
       case SE:                      // command sequence end
         state = TN_normal;
         break;
+      case BREAK:
+        state = TN_break_cmd;
+        break;
       default:                      // not sure... let's ignore
-        uart0_write_char(IAC);
-        uart0_write_char(c);
+        os_printf("Telnet: ignore IAC + %d\n", c);
+        state = TN_normal;
+        break;
       }
       break;
+    case TN_break_cmd: {
+        if (((READ_PERI_REG(UART_STATUS(UART0))>>UART_TXFIFO_CNT_S)&UART_TXFIFO_CNT) == 0) {  // TX-FIFO of UART0 must be empty
+          os_printf("Telnet: BREAK\n");
+          PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_GPIO1);
+          GPIO_OUTPUT_SET(1, 0);
+          os_delay_us(1000L);
+          GPIO_OUTPUT_SET(1, 1);
+          PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
+        }
+        state = TN_normal;
+        break;
+      }
     case TN_will: {                 // client announcing it will send telnet cmds, try to respond
       char respBuf[3] = {IAC, DONT, c};
       if (c == ComPortOpt) respBuf[1] = DO;
@@ -102,6 +135,13 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
       espbuffsend(conn, respBuf, 3);
       state = TN_normal;            // go back to normal
       break; }
+    case TN_do: {
+        char respBuf[3] = {IAC, WONT, c};
+        os_printf("Telnet: rejecting DO %d\n", c);
+        espbuffsend(conn, respBuf, 3);
+        state = TN_normal;
+        break;
+      }
     case TN_start:                  // in command seq, now comes the type of cmd
       if (c == ComPortOpt) state = TN_comPort;
       else state = TN_end;          // an option we don't know, skip 'til the end seq
@@ -114,11 +154,25 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
       case SetControl: state = TN_setControl; break;
       case SetDataSize: state = TN_setDataSize; break;
       case SetParity: state = TN_setParity; break;
+      case SetStopBits: state = TN_setStopBits; break;
       case SetBaud: state = TN_setBaud; tn_baudCnt = 0; tn_baud = 0; break;
       case PurgeData: state = TN_purgeData; break;
+      case Signature: state=TN_signature; break;
+      case SetLineStateMask: state = TN_linestate; break;
       default: state = TN_end; break;
       }
       break;
+    case TN_linestate: {
+      char respBuf[7] = {IAC, SB,  ComPortOpt, NotifyLineState, 0, IAC, SE};
+      espbuffsend(conn, respBuf, 14);
+      state = TN_end;
+      break; }
+    case TN_signature: {
+        char respBuf[14] = { IAC, SB, ComPortOpt, Signature, 'e', 's', 'p', '-', 'l', 'i', 'n', 'k', IAC, SE };
+        espbuffsend(conn, respBuf, 14);
+        state = TN_end;
+        break;
+      }
     case TN_purgeData:              // purge FIFO-buffers
       switch (c) {
         case PURGE_TX:
@@ -129,6 +183,20 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
       break;
     case TN_setControl:             // switch control line and delay a tad
       switch (c) {
+      case OUTPUT_FLOW_REQ:
+      case OUTPUT_FLOW_NONE:
+      case OUTPUT_FLOW_SOFT:
+      case OUTPUT_FLOW_HARD: {
+        char respBuf[7] = {IAC, SB, ComPortOpt, SetControl, OUTPUT_FLOW_NONE, IAC, SE};
+        espbuffsend(conn, respBuf, 7);
+        break; }
+      case INPUT_FLOW_REQ:
+      case INPUT_FLOW_NONE:
+      case INPUT_FLOW_SOFT:
+      case INPUT_FLOW_HARD: {
+        char respBuf[7] = {IAC, SB, ComPortOpt, SetControl, INPUT_FLOW_NONE, IAC, SE};
+        espbuffsend(conn, respBuf, 7);
+        break; }
       case DTR_ON:
         if (mcu_reset_pin >= 0) {
 #ifdef SERBR_DBG
@@ -227,16 +295,37 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
         } else if (tn_baud == 0) {
           // baud rate of zero means we need to send the baud rate
           uint32_t b = flashConfig.baud_rate;
-          char respBuf[10] = { IAC, SB, ComPortOpt, SetDataSize, b>>24, b>>16, b>>8, b, IAC, SE };
+          char respBuf[10] = { IAC, SB, ComPortOpt, SetBaud, b>>24, b>>16, b>>8, b, IAC, SE };
           espbuffsend(conn, respBuf, 10);
         }
         state = TN_end;
       }
       break;
+    case TN_setStopBits:
+      if (c == 0) {
+        // stop bits of zero means we need to send the stop bits info
+        char respBuf[7] = { IAC, SB, ComPortOpt, SetStopBits, 1, IAC, SE };
+        if (flashConfig.stop_bits == ONE_STOP_BIT) respBuf[4] = 1;
+        if (flashConfig.stop_bits == TWO_STOP_BIT) respBuf[4] = 2;
+        if (flashConfig.stop_bits == ONE_HALF_STOP_BIT) respBuf[4] = 3;
+        espbuffsend(conn, respBuf, 7);
+        state = TN_end;
+        break;
+      }
+      uint8_t stop_bits = ONE_STOP_BIT;
+      if (c==1) stop_bits=ONE_STOP_BIT;
+      if (c==2) stop_bits=TWO_STOP_BIT;
+      if (c==3) stop_bits=ONE_HALF_STOP_BIT;
+      flashConfig.stop_bits = stop_bits;
+      //uart0_config(flashConfig.data_bits, flashConfig.parity, flashConfig.stop_bits);
+      configSave();
+      os_printf("Telnet: stop_bits %s\n", c==1?"1":c==2?"2":"1.5");
+      state = TN_end;
+      break;
     case TN_setParity:
       if (c == 0) {
         // parity of zero means we need to send the parity info
-        char respBuf[7] = { IAC, SB, ComPortOpt, SetDataSize, 1/*none*/, IAC, SE };
+        char respBuf[7] = { IAC, SB, ComPortOpt, SetParity, 1/*none*/, IAC, SE };
         if (flashConfig.parity == ODD_BITS) respBuf[4] = 2;
         if (flashConfig.parity == EVEN_BITS) respBuf[4] = 3;
         espbuffsend(conn, respBuf, 7);
