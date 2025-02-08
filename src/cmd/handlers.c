@@ -221,7 +221,7 @@ cmdGetWifiInfo(CmdPacket *cmd) {
   struct ip_info info;
   wifi_get_ip_info(0, &info);
   uint8_t mac[6];
-  wifi_get_macaddr(0, mac);
+  wifi_get_macaddr(STATION_IF, mac);
 
   cmdResponseStart(CMD_RESP_CB, callback, 4);
   cmdResponseBody(&info.ip.addr, sizeof(info.ip.addr));
