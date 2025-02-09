@@ -14,6 +14,7 @@ revision = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], stdout=subpro
 VERSION = "{} - {} - {}".format(branch, datetime.datetime.now().isoformat(sep=' ', timespec='seconds'), revision)
 
 VERSION_CONTENTS = """
+#pragma once
 #define VERSION esp-link {}
 """.format(VERSION)
 
