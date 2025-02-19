@@ -22,3 +22,9 @@ jobs:
 
       - name: Build PlatformIO Project
         run: pio run
+
+      - name: Upload Build Result
+        uses: actions/upload-artifact@v3
+        with:
+          name: Build folder
+          path: .pio/build/
