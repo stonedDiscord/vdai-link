@@ -31,7 +31,6 @@
 #define SLIP_DBG
 #define UART_DBG
 #define MDNS_DBG
-#define OPTIBOOT_DBG
 #undef SYSLOG_DBG
 #define CGISERVICES_DBG
 

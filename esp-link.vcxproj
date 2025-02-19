@@ -16,7 +16,6 @@
     <ClCompile Include="esp-link\cgi.c" />
     <ClCompile Include="esp-link\cgiflash.c" />
     <ClCompile Include="esp-link\cgimqtt.c" />
-    <ClCompile Include="esp-link\cgioptiboot.c" />
     <ClCompile Include="esp-link\cgipins.c" />
     <ClCompile Include="esp-link\cgiservices.c" />
     <ClCompile Include="esp-link\cgitcp.c" />
@@ -54,7 +53,6 @@
     <ClInclude Include="esp-link\cgi.h" />
     <ClInclude Include="esp-link\cgiflash.h" />
     <ClInclude Include="esp-link\cgimqtt.h" />
-    <ClInclude Include="esp-link\cgioptiboot.h" />
     <ClInclude Include="esp-link\cgipins.h" />
     <ClInclude Include="esp-link\cgiservices.h" />
     <ClInclude Include="esp-link\cgitcp.h" />
