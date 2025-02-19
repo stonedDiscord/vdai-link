@@ -22,27 +22,36 @@ static uint32_t baudRate;    // baud rate at which we're programming
 static void initBaud(void);
 
 int ICACHE_FLASH_ATTR vdaiC(HttpdConnData *connData) {
-
+  const char command = 'C';
+  uart0_write_char(command);
 }
 
 int ICACHE_FLASH_ATTR vdaiE(HttpdConnData *connData) {
-  
+  const char command = 'E';
+  uart0_write_char(command);
 }
 
 int ICACHE_FLASH_ATTR vdaiG(HttpdConnData *connData) {
-  
+  const char command = 'G';
+  uart0_write_char(command);
 }
 
 int ICACHE_FLASH_ATTR vdaiL(HttpdConnData *connData) {
-  
+  const char command = 'L';
+  uart0_write_char(command);
+
+  char recv1[8];
+  uint16_t got1 = uart0_rx_poll(recv1, 5, 50000)
 }
 
 int ICACHE_FLASH_ATTR vdaiK(HttpdConnData *connData) {
-  
+  const char command = 'K';
+  uart0_write_char(command);
 }
 
 int ICACHE_FLASH_ATTR vdaiS(HttpdConnData *connData) {
-  
+  const char command = 'S';
+  uart0_write_char(command);
 }
 
 static int baudRates[] = { 0, 110, 4800, 9600, 115200 };
