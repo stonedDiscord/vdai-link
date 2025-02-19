@@ -41,7 +41,7 @@ int ICACHE_FLASH_ATTR vdaiL(HttpdConnData *connData) {
   uart0_write_char(command);
 
   char recv1[8];
-  uint16_t got1 = uart0_rx_poll(recv1, 5, 50000)
+  uint16_t got1 = uart0_rx_poll(recv1, 5, 50000);
 }
 
 int ICACHE_FLASH_ATTR vdaiK(HttpdConnData *connData) {
@@ -54,7 +54,7 @@ int ICACHE_FLASH_ATTR vdaiS(HttpdConnData *connData) {
   uart0_write_char(command);
 }
 
-static int baudRates[] = { 0, 110, 4800, 9600, 115200 };
+static int baudRates[] = { 0, 4800, 9600, 110, 115200 };
 
 static void ICACHE_FLASH_ATTR setBaud() {
   baudRate = baudRates[(baudCnt++) % 4];
