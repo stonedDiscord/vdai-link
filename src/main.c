@@ -18,6 +18,7 @@
 #include "cgitcp.h"
 #include "cgimqtt.h"
 #include "cgiflash.h"
+#include "cgivdai.h"
 #include "cgiwebserversetup.h"
 #include "httpd/auth.h"
 #include "espfs/espfs.h"
