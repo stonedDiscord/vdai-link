@@ -16,6 +16,7 @@
 #define INIT_DELAY     150   // wait this many millisecs before sending anything
 #define BAUD_INTERVAL  600   // interval after which we change baud rate
 
+static short baudCnt;        // counter for sync attempts at different baud rates
 static uint32_t baudRate;    // baud rate at which we're programming
 
 static void initBaud(void);
@@ -43,6 +44,8 @@ int ICACHE_FLASH_ATTR vdaiK(HttpdConnData *connData) {
 int ICACHE_FLASH_ATTR vdaiS(HttpdConnData *connData) {
   
 }
+
+static int baudRates[] = { 0, 110, 4800, 9600, 115200 };
 
 static void ICACHE_FLASH_ATTR setBaud() {
   baudRate = baudRates[(baudCnt++) % 4];
