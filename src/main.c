@@ -18,8 +18,6 @@
 #include "cgitcp.h"
 #include "cgimqtt.h"
 #include "cgiflash.h"
-#include "cgioptiboot.h"
-#include "cgimega.h"
 #include "cgiwebserversetup.h"
 #include "httpd/auth.h"
 #include "espfs/espfs.h"
@@ -74,14 +72,12 @@ HttpdBuiltInUrl builtInUrls[] = {
   { "/flash/upload", cgiUploadFirmware, NULL },
   { "/flash/reboot", cgiRebootFirmware, NULL },
 
-  { "/pgm/sync", cgiOptibootSync, NULL },
-  { "/pgm/upload", cgiOptibootData, NULL },
-
-  { "/pgmmega/sync", cgiMegaSync, NULL },		// Start programming mode
-  { "/pgmmega/upload", cgiMegaData, NULL },		// Upload stuff
-  { "/pgmmega/read/*", cgiMegaRead, NULL },		// Download stuff (to verify)
-  { "/pgmmega/fuse/*", cgiMegaFuse, NULL },		// Read or write fuse
-  { "/pgmmega/rebootmcu", cgiMegaRebootMCU, NULL },	// Get out of programming mode
+  { "/vdai/checksum", vdaiC, NULL },
+  { "/vdai/einsatz", vdaiE, NULL },
+  { "/vdai/gewinn", vdaiG, NULL },
+  { "/vdai/kassierung", vdaiL, NULL },
+  { "/vdai/kopie", vdaiK, NULL },
+  { "/vdai/statistik", vdaiS, NULL },
 
   { "/log/text", ajaxLog, NULL },
   { "/log/dbg", ajaxLogDbg, NULL },

@@ -63,7 +63,6 @@
     <ClInclude Include="esp-link\log.h" />
     <ClInclude Include="esp-link\mqtt_client.h" />
     <ClInclude Include="esp-link\status.h" />
-    <ClInclude Include="esp-link\stk500.h" />
     <ClInclude Include="esp-link\task.h" />
     <ClInclude Include="espfs\espfs.h" />
     <ClInclude Include="espfs\espfsformat.h" />
