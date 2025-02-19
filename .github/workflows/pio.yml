@@ -24,7 +24,7 @@ jobs:
         run: pio run
 
       - name: Upload Build Result
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Build folder
           path: .pio/build/
