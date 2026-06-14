@@ -19,6 +19,7 @@
 #include "cgimqtt.h"
 #include "cgiflash.h"
 #include "cgivdai.h"
+#include "capture.h"
 #include "cgiwebserversetup.h"
 #include "httpd/auth.h"
 #include "espfs/espfs.h"
@@ -73,12 +74,15 @@ HttpdBuiltInUrl builtInUrls[] = {
   { "/flash/upload", cgiUploadFirmware, NULL },
   { "/flash/reboot", cgiRebootFirmware, NULL },
 
-  { "/vdai/checksum", vdaiC, NULL },
-  { "/vdai/einsatz", vdaiE, NULL },
-  { "/vdai/gewinn", vdaiG, NULL },
-  { "/vdai/kassierung", vdaiL, NULL },
-  { "/vdai/kopie", vdaiK, NULL },
-  { "/vdai/statistik", vdaiS, NULL },
+  { "/vdai/preset", vdaiPreset, NULL },
+  { "/vdai/readout", vdaiReadout, NULL },
+  { "/vdai/einsat", vdaiEinsat, NULL },
+  { "/vdai/cmd", vdaiCmd, NULL },
+  { "/vdai/time", vdaiTime, NULL },
+  { "/vdai/daily", vdaiDaily, NULL },
+  { "/vdai/records/get", ajaxRecordGet, NULL },
+  { "/vdai/records/clear", ajaxRecordClear, NULL },
+  { "/vdai/records", ajaxRecordList, NULL },
 
   { "/log/text", ajaxLog, NULL },
   { "/log/dbg", ajaxLogDbg, NULL },
@@ -161,43 +165,52 @@ void ICACHE_FLASH_ATTR
 user_init(void) {
   system_timer_reinit();
 
-  // uncomment the following three lines to see flash config messages for troubleshooting
-  //uart_init(115200, 115200);
-  //logInit();
-  //os_delay_us(60000L);
+  // --- TEMP boot tracing: init uart early so every step is visible on serial @115200 ---
+  uart_init(CALC_UARTMODE(EIGHT_BITS, NONE_BITS, ONE_STOP_BIT), 115200, 115200);
+  os_delay_us(20000L);
+  os_printf("\r\nBOOT> user_init entered\r\n");
 
   // get the flash config so we know how to init things
   //configWipe(); // uncomment to reset the config for testing purposes
   bool restoreOk = configRestore();
+  os_printf("BOOT> configRestore done (%s)\r\n", restoreOk ? "ok" : "FAILED");
   // Init gpio pin registers
   gpio_init();
   gpio_output_set(0, 0, 0, (1<<15)); // some people tie it to GND, gotta ensure it's disabled
+  os_printf("BOOT> gpio_init done\r\n");
   // init UART
   uart_init(CALC_UARTMODE(flashConfig.data_bits, flashConfig.parity, flashConfig.stop_bits),
             flashConfig.baud_rate, 115200);
   logInit(); // must come after init of uart
+  os_printf("BOOT> uart/log init done\r\n");
   // Say hello (leave some time to cause break in TX after boot loader's msg
   os_delay_us(10000L);
   os_printf("\n\n** %s\n", esp_link_version);
   os_printf("Flash config restore %s\n", restoreOk ? "ok" : "*FAILED*");
   // Status LEDs
+  os_printf("BOOT> before statusInit\r\n");
   statusInit();
   serledInit();
   // Wifi
+  os_printf("BOOT> before wifiInit\r\n");
   wifiInit();
+  os_printf("BOOT> after wifiInit\r\n");
   // init the flash filesystem with the html stuff
   EspFsInitResult res = espFsInit(espLinkCtx, espfs_image, ESPFS_MEMORY);
   os_printf("espFsInit %s (%d)\n", res?"ERR":"ok", res);
 
   // mount the http handlers
+  os_printf("BOOT> before httpdInit\r\n");
   httpdInit(builtInUrls, 80);
 #ifdef WEBSERVER
   WEB_Init();
 #endif
 
   // init the wifi-serial transparent bridge (port 23)
+  os_printf("BOOT> before serbridgeInit\r\n");
   serbridgeInit(23, 2323);
   uart_add_recv_cb(&serbridgeUartCb);
+  os_printf("BOOT> after serbridgeInit\r\n");
 #ifdef SHOW_HEAP_USE
   os_timer_disarm(&prHeapTimer);
   os_timer_setfn(&prHeapTimer, prHeapTimerCb, NULL);
@@ -215,7 +228,9 @@ user_init(void) {
   NOTICE("** %s: ready, heap=%ld", esp_link_version, (unsigned long)system_get_free_heap_size());
 
   // Init SNTP service
+  os_printf("BOOT> before cgiServicesSNTPInit\r\n");
   cgiServicesSNTPInit();
+  os_printf("BOOT> after cgiServicesSNTPInit\r\n");
 #ifdef MQTT
   if (flashConfig.mqtt_enable) {
     NOTICE("initializing MQTT");

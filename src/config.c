@@ -35,6 +35,8 @@ FlashConfig flashDefault = {
   .parity	= NONE_BITS,
   .stop_bits	= ONE_STOP_BIT,
   .tx_enable_pin = -1,
+  .vdai_daily_enable = 0, .vdai_daily_preset = 0, .vdai_daily_command = 0,
+  .vdai_daily_hour = 3, .vdai_daily_code = "\0",
 };
 
 typedef union {

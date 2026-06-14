@@ -44,6 +44,12 @@ typedef struct {
   char     mqtt_password[70];          // MQTT password, was 32-char mqtt_old_password
   char     mqtt_username[70];          // MQTT username, was 32-char mqtt_old_username
   int8_t   tx_enable_pin;
+  // VDAI: automatic daily readout (keeps machines from locking out; 0 == disabled, backward compat)
+  uint8_t  vdai_daily_enable;          // 0=off, 1=run an automatic daily readout
+  uint8_t  vdai_daily_preset;          // 0=none,1=vdai,2=adp,3=adpalt,4=bally,5=berg
+  uint8_t  vdai_daily_command;         // 0=none,1=readout,2=einsat,3=RAMSET,4=SERINI,5=GIRADA,6=RSOK,7=MILLIONENSPIEL
+  uint8_t  vdai_daily_hour;            // local hour 0-23 to run at when SNTP time is available
+  char     vdai_daily_code[18];        // 17-char VDAI readout option code + NUL
 } FlashConfig;
 extern FlashConfig flashConfig;
 

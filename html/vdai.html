@@ -1,0 +1,135 @@
+  <div id="main">
+    <div class="header">
+      <h1>VDAI</h1>
+    </div>
+
+    <div class="content">
+      <div class="pure-g">
+
+        <!-- LEFT COLUMN -->
+        <div class="pure-u-1 pure-u-md-1-2">
+
+          <div class="card">
+            <h1>Device preset</h1>
+            <p>Sets the serial baud rate for the connected machine.</p>
+            <form action="#" id="preset-form" class="pure-form">
+              <label><input type="radio" name="preset" value="vdai" checked> VDAI (9600)</label><br>
+              <label><input type="radio" name="preset" value="adpalt"> ADP weisse CPU (4800)</label><br>
+              <label><input type="radio" name="preset" value="adp"> ADP 91er (4800)</label><br>
+              <label><input type="radio" name="preset" value="bally"> Bally vor Eurotec (110)</label><br>
+              <label><input type="radio" name="preset" value="berg"> Bergmann bis 199x (110)</label>
+            </form>
+          </div>
+
+          <div class="card" id="vdai-card">
+            <h1>VDAI readout</h1>
+            <form action="#" id="vdai-form" class="pure-form">
+              <div class="pure-form-stacked">
+                <label>Einsätze / Gewinne</label>
+                <label><input type="radio" name="eg" value=""> Keine Einsätze</label>
+                <label><input type="radio" name="eg" value="e"> Einsätze (kurz)</label>
+                <label><input type="radio" name="eg" value="E" checked> Einsätze (lang)</label>
+                <label><input type="radio" name="eg" value="g"> Gewinne (kurz)</label>
+                <label><input type="radio" name="eg" value="G"> Gewinne (lang)</label>
+              </div>
+              <hr>
+              <label><input type="checkbox" id="vdaiDelete" checked> Daten nach Ausdruck löschen</label><br>
+              <label><input type="checkbox" id="vdaiStat" checked> Statistik</label><br>
+              <label><input type="checkbox" id="vdaiLast20"> Letzte 20 Kassierungen</label><br>
+              <label><input type="checkbox" id="vdaiCopy"> Kopie des letzten Ausdrucks</label><br>
+              <label><input type="checkbox" id="vdaiCheck"> Checksumme</label>
+              <div class="pure-form-stacked" style="margin-top:0.5em">
+                <label>Befehl (Code)</label>
+                <input type="text" id="vdaiCode" maxlength="17">
+              </div>
+            </form>
+            <button id="readoutBtn" class="pure-button button-primary">Auslesen starten</button>
+            <label style="margin-left:1em"><input type="checkbox" id="readoutSave"> in Flash speichern</label>
+          </div>
+
+          <div class="card" id="adpalt-card">
+            <h1>ADP (weisse CPU) commands</h1>
+            <form action="#" id="time-form" class="pure-form pure-form-stacked">
+              <label>Uhr</label>
+              <input type="datetime-local" id="adpaltTime">
+              <button id="adpaltTimeBtn" class="pure-button button-primary">Zeit senden</button>
+            </form>
+            <div style="margin-top:0.5em">
+              <button class="pure-button vdai-cmd" data-cmd="RAMSET">RAMSET</button>
+              <button class="pure-button vdai-cmd" data-cmd="SERINI">SERINI</button>
+              <button class="pure-button vdai-cmd" data-cmd="GIRADA">GIRADA</button>
+              <button class="pure-button vdai-cmd" data-cmd="RSOK">RSOK</button>
+              <button class="pure-button vdai-cmd" data-cmd="MILLIONENSPIEL">MILLIONENSPIEL</button>
+            </div>
+          </div>
+
+          <div class="card" id="adp-card">
+            <h1>ADP (91er) Einsatzprotokoll</h1>
+            <button id="einsatBtn" class="pure-button button-primary">Einsatz auslesen</button>
+          </div>
+
+          <div class="card">
+            <h1>Last command output</h1>
+            <textarea id="vdaiOut" readonly style="width:100%;height:18em"></textarea>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="pure-u-1 pure-u-md-1-2">
+
+          <div class="card">
+            <h1>Automatic daily readout</h1>
+            <p>Reads the machine out once per day so it does not lock out (some lock after
+              60 days). Each result is stored to flash as a dated record below.</p>
+            <form action="#" id="daily-form" class="pure-form pure-form-stacked">
+              <label><input type="checkbox" name="enable"> Enable daily readout</label>
+              <label>Preset</label>
+              <select name="preset">
+                <option value="0">(none)</option>
+                <option value="1">VDAI (9600)</option>
+                <option value="2">ADP 91er (4800)</option>
+                <option value="3">ADP weisse CPU (4800)</option>
+                <option value="4">Bally (110)</option>
+                <option value="5">Bergmann (110)</option>
+              </select>
+              <label>Command</label>
+              <select name="command">
+                <option value="0">(none)</option>
+                <option value="1">VDAI readout</option>
+                <option value="2">ADP Einsatz</option>
+                <option value="3">RAMSET</option>
+                <option value="4">SERINI</option>
+                <option value="5">GIRADA</option>
+                <option value="6">RSOK</option>
+                <option value="7">MILLIONENSPIEL</option>
+              </select>
+              <label>Hour of day (0-23, requires SNTP time; else runs every 24h)</label>
+              <input type="number" name="hour" min="0" max="23">
+              <label>VDAI code (for the readout command)</label>
+              <input type="text" name="code" maxlength="17">
+              <button id="daily-button" type="submit" class="pure-button button-primary">
+                Save schedule</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h1>Stored records <div id="rec-spinner" class="spinner spinner-small"></div></h1>
+            <p id="rec-info"></p>
+            <table id="rec-table" class="pure-table pure-table-horizontal"><tbody></tbody></table>
+            <button id="rec-clear" class="pure-button">Clear all records</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="vdai.js"></script>
+<script type="text/javascript">
+onLoad(function() {
+  vdaiInit();
+});
+</script>
+</body></html>
