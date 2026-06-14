@@ -240,6 +240,10 @@ void ICACHE_FLASH_ATTR httpdSetOutputBuffer(HttpdConnData *conn, char *buff, sho
 void ICACHE_FLASH_ATTR httpdStartResponse(HttpdConnData *conn, int code) {
   char buff[128];
   int l;
+  // Guard against responding on a connection the SDK has already torn down. This happens when a
+  // cgi handler blocks long enough for the espconn to be recycled; conn->priv ends up NULL and
+  // the store below faulted with StoreProhibited at priv->code (offset 0x422).
+  if (conn->priv == NULL || conn->conn == NULL) return;
   conn->priv->code = code;
   char *status = code < 400 ? "OK" : "ERROR";
   l = os_sprintf(buff, "HTTP/1.0 %d %s\r\nServer: esp-link\r\nConnection: close\r\n", code, status);
@@ -265,6 +269,7 @@ void ICACHE_FLASH_ATTR httpdEndHeaders(HttpdConnData *conn) {
 void ICACHE_FLASH_ATTR httpdRedirect(HttpdConnData *conn, char *newUrl) {
   char buff[1024];
   int l;
+  if (conn->priv == NULL || conn->conn == NULL) return; // connection gone, see httpdStartResponse
   conn->priv->code = 302;
   l = os_sprintf(buff, "HTTP/1.0 302 Found\r\nServer: esp8266-link\r\nConnection: close\r\n"
       "Location: %s\r\n\r\nRedirecting to %s\r\n", newUrl, newUrl);
@@ -286,6 +291,7 @@ int ICACHE_FLASH_ATTR cgiRedirect(HttpdConnData *connData) {
 //the data is seen as a C-string.
 //Returns 1 for success, 0 for out-of-memory.
 int ICACHE_FLASH_ATTR httpdSend(HttpdConnData *conn, const char *data, int len) {
+  if (conn->priv == NULL || conn->conn == NULL) return 0; // connection gone, see httpdStartResponse
   if (len<0) len = strlen(data);
   if (conn->priv->sendBuffLen + len>conn->priv->sendBuffMax) {
     DBG("%sERROR! httpdSend full (%d of %d)\n",
@@ -299,6 +305,7 @@ int ICACHE_FLASH_ATTR httpdSend(HttpdConnData *conn, const char *data, int len) 
 
 //Helper function to send any data in conn->priv->sendBuff
 void ICACHE_FLASH_ATTR httpdFlush(HttpdConnData *conn) {
+  if (conn->priv == NULL || conn->conn == NULL) return; // connection gone, see httpdStartResponse
   if (conn->priv->sendBuffLen != 0) {
     sint8 status = espconn_sent(conn->conn, (uint8_t*)conn->priv->sendBuff, conn->priv->sendBuffLen);
     if (status != 0) {
