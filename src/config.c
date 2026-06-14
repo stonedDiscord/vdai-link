@@ -16,7 +16,10 @@ FlashConfig flashDefault = {
   .staticip     = 0,
   .netmask      = 0x00ffffff,
   .gateway      = 0,
-  .log_mode     = 0,
+  .log_mode     = 1,   // LOG_MODE_OFF: UART0 drives the machine here, so keep the debug log off
+                       // it (chatter would corrupt the machine line). Logs still go to the
+                       // in-memory ring buffer viewable over WiFi; set "on0" in the web UI's
+                       // Debug-log dropdown to temporarily echo to UART0 when debugging.
   .swap_uart    = 0,
   .tcp_enable   = 1, .rssi_enable = 0,
   .api_key      = "",
